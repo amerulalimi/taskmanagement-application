@@ -1,0 +1,50 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-db
+    environment:
+      MYSQL_ROOT_PASSWORD: "Senario@123"
+      MYSQL_DATABASE: "assessment"
+    # No host port mapping needed; backend talks to MySQL via internal Docker network
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - appnet
+
+  backend:
+    build:
+      context: ./back-end
+      dockerfile: Dockerfile
+    container_name: flask-backend
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./back-end/.env
+    volumes:
+      - ./back-end:/app
+    depends_on:
+      - mysql
+    networks:
+      - appnet
+
+  frontend:
+    build:
+      context: ./front-end
+      dockerfile: Dockerfile
+    container_name: react-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./front-end:/app
+      - /app/node_modules
+    command: npm run dev -- --host 0.0.0.0
+    depends_on:
+      - backend
+    networks:
+      - appnet
+
+networks:
+  appnet:
+
+volumes:
+  db_data:

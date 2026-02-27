@@ -1,0 +1,60 @@
+name: CI/CD - Build and Push Docker Images
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      
+# for ecr aws repository
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  ECR_BACKEND_REPOSITORY: ${{ secrets.ECR_BACKEND_REPOSITORY }}   # e.g. task-backend
+  ECR_FRONTEND_REPOSITORY: ${{ secrets.ECR_FRONTEND_REPOSITORY }} # e.g. task-frontend
+
+jobs:
+  build-and-push:
+    name: Build and push images to ECR
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push backend image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          BACKEND_IMAGE="$ECR_REGISTRY/${ECR_BACKEND_REPOSITORY}:latest"
+          BACKEND_IMAGE_SHA="$ECR_REGISTRY/${ECR_BACKEND_REPOSITORY}:${GITHUB_SHA}"
+
+          docker build -t "$BACKEND_IMAGE" -t "$BACKEND_IMAGE_SHA" ./back-end
+          docker push "$BACKEND_IMAGE"
+          docker push "$BACKEND_IMAGE_SHA"
+
+      - name: Build and push frontend image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          FRONTEND_IMAGE="$ECR_REGISTRY/${ECR_FRONTEND_REPOSITORY}:latest"
+          FRONTEND_IMAGE_SHA="$ECR_REGISTRY/${ECR_FRONTEND_REPOSITORY}:${GITHUB_SHA}"
+
+          docker build -t "$FRONTEND_IMAGE" -t "$FRONTEND_IMAGE_SHA" ./front-end
+          docker push "$FRONTEND_IMAGE"
+          docker push "$FRONTEND_IMAGE_SHA"
+
