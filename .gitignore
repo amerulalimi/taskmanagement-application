@@ -15,9 +15,9 @@ build/
 .DS_Store
 *.log
 
-# Environment / secrets
-.env
-back-end/.env
+# # Environment / secrets
+# .env
+# back-end/.env
 
 # Docker
 *.pid
